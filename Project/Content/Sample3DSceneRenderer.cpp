@@ -341,44 +341,20 @@ bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<VertexPosi
 			}
 			else if (type == "f")
 			{
-				std::string buffer2;
-				int count = 0;
-				
-				std::string teste;
-				std::string teste1;
-				std::string teste2;
-				
-				std::string teste3;
-				std::string teste4;
-				std::string teste5;
+				std::string verts[3];
+				std::string uvs[3];
+				std::string normals[3];
 
-				std::string teste6;
-				std::string teste7;
-				std::string teste8;
+				for (int i = 0; i < 3; ++i)
+				{
+					std::getline(stream, verts[i], '/');
+					std::getline(stream, uvs[i], '/');
+					std::getline(stream, normals[i], ' ');
 
-				std::getline(stream, teste, '/');
-				std::getline(stream, teste1, '/');
-				std::getline(stream, teste2, ' ');
-
-				std::getline(stream, teste3, '/');
-				std::getline(stream, teste4, '/');
-				std::getline(stream, teste5, ' ');
-
-				std::getline(stream, teste6, '/');
-				std::getline(stream, teste7, '/');
-				std::getline(stream, teste8, '\n');
-
-				vertexIndices.push_back(stoi(teste));
-				vertexIndices.push_back(stoi(teste3));
-				vertexIndices.push_back(stoi(teste6));
-
-				uvIndices.push_back(stoi(teste1));
-				uvIndices.push_back(stoi(teste4));
-				uvIndices.push_back(stoi(teste7));
-
-				normalIndices.push_back(stoi(teste2));
-				normalIndices.push_back(stoi(teste5));
-				normalIndices.push_back(stoi(teste8));
+					vertexIndices.push_back(stoi(verts[i]));
+					uvIndices.push_back(stoi(uvs[i]));
+					normalIndices.push_back(stoi(normals[i]));
+				}
 			}
 		}
 
@@ -403,95 +379,6 @@ bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<VertexPosi
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 {
-	// CUBE LOADING
-	auto loadVSTask = DX::ReadDataAsync(L"SampleVertexShader.cso");
-	auto loadPSTask = DX::ReadDataAsync(L"SamplePixelShader.cso");
-
-	auto createVSTask = loadVSTask.then([this](const std::vector<byte>& fileData)
-	{
-		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateVertexShader(&fileData[0], fileData.size(), nullptr, &m_vertexShader));
-
-		static const D3D11_INPUT_ELEMENT_DESC vertexDesc[] =
-		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		};
-
-		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateInputLayout(vertexDesc, ARRAYSIZE(vertexDesc), &fileData[0], fileData.size(), &m_inputLayout));
-	});
-
-	auto createPSTask = loadPSTask.then([this](const std::vector<byte>& fileData)
-	{
-		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &m_pixelShader));
-
-		CD3D11_BUFFER_DESC constantBufferDesc(sizeof(ModelViewProjectionConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
-		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&constantBufferDesc, nullptr, &m_constantBuffer));
-	});
-
-	// Once both shaders are loaded, create the mesh.
-	auto createCubeTask = (createPSTask && createVSTask).then([this]()
-	{
-		static const VertexPositionColor cubeVertices[] =
-		{
-			{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, 0.0f) },
-			{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
-			{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
-			{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 1.0f) },
-			{ XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
-			{ XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 1.0f) },
-			{ XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f) },
-			{ XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 1.0f, 1.0f) },
-		};
-
-		D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
-		vertexBufferData.pSysMem = cubeVertices;
-		vertexBufferData.SysMemPitch = 0;
-		vertexBufferData.SysMemSlicePitch = 0;
-		CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(cubeVertices), D3D11_BIND_VERTEX_BUFFER);
-		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &m_vertexBuffer));
-
-		// Load mesh indices. Each trio of indices represents
-		// a triangle to be rendered on the screen.
-		// For example: 0,2,1 means that the vertices with indexes
-		// 0, 2 and 1 from the vertex buffer compose the
-		// first triangle of this mesh.
-		static const unsigned short cubeIndices[] =
-		{
-			0,1,2, // -x
-			1,3,2,
-
-			4,6,5, // +x
-			5,6,7,
-
-			0,5,1, // -y
-			0,4,5,
-
-			2,7,6, // +y
-			2,3,7,
-
-			0,6,4, // -z
-			0,2,6,
-
-			1,7,3, // +z
-			1,5,7,
-		};
-
-		m_indexCount = ARRAYSIZE(cubeIndices);
-
-		D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
-		indexBufferData.pSysMem = cubeIndices;
-		indexBufferData.SysMemPitch = 0;
-		indexBufferData.SysMemSlicePitch = 0;
-		CD3D11_BUFFER_DESC indexBufferDesc(sizeof(cubeIndices), D3D11_BIND_INDEX_BUFFER);
-		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_indexBuffer));
-	});
-
-	createCubeTask.then([this]()
-	{
-		m_loadingComplete = true;
-	});
-
-	// MODEL LOADING
 	auto loadVSModel = DX::ReadDataAsync(L"ModelVertexShader.cso"); // Model Vertex Shader
 	auto loadPSModel = DX::ReadDataAsync(L"ModelPixelShader.cso"); // MOdel Pixel Shader
 	auto loadVSSkyboxTask = DX::ReadDataAsync(L"SkyboxVertexShader.cso"); // Skybox Vertex Shader
@@ -560,14 +447,14 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	{
 		static const VertexPositionColor skyboxVertices[] =
 		{
-			{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, 0.0f) },
-			{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
-			{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
-			{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 1.0f) },
-			{ XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
-			{ XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 1.0f) },
-			{ XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f) },
-			{ XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 1.0f, 1.0f) },
+			{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+			{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+			{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+			{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 1.0f), XMFLOAT3(-1.0f, 0.0f, 0.0f) },
+			{ XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+			{ XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+			{ XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f), XMFLOAT3(1.0f, 0.0f, 1.0f) },
+			{ XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
 		};
 
 		static const unsigned short skyboxIndices[] =
@@ -609,32 +496,17 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		CD3D11_BUFFER_DESC indexBufferDesc(sizeof(skyboxIndices), D3D11_BIND_INDEX_BUFFER);
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.skybox.m_indexBuffer));
 	});
+
+	createSkyBox.then([this]()
+	{
+		m_loadingComplete = true;
+	});
 }
 
 void Sample3DSceneRenderer::DrawScene(void)
 {
 	auto context = m_deviceResources->GetD3DDeviceContext();
-	// CUBE STUFF
-	// Prepare the constant buffer to send it to the graphics device.
-	context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0, 0);
-	// Each vertex is one instance of the VertexPositionColor struct.
-	UINT stride = sizeof(VertexPositionColor);
-	UINT offset = 0;
-	context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
-	// Each index is one 16-bit unsigned integer (short).
-	context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	context->IASetInputLayout(m_inputLayout.Get());
-	// Attach our vertex shader.
-	context->VSSetShader(m_vertexShader.Get(), nullptr, 0);
-	// Send the constant buffer to the graphics device.
-	context->VSSetConstantBuffers1(0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr);
-	// Attach our pixel shader.
-	context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
-	// Draw the objects.
-	//context->DrawIndexed(m_indexCount, 0, 0);
 
-	// MY STUFF
 	// Light mapping
 	D3D11_MAPPED_SUBRESOURCE mappedSubresource;
 	m_deviceResources->GetD3DDeviceContext()->Map(m_scene.lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
@@ -658,8 +530,8 @@ void Sample3DSceneRenderer::DrawScene(void)
 		m_scene.models[i].m_constantBufferData.projection = m_constantBufferData.projection;
 		context->UpdateSubresource1(m_scene.constantBuffer.Get(), 0, NULL, &m_scene.models[i].m_constantBufferData, 0, 0, 0);
 
-		stride = sizeof(VertexPositionUVNormal);
-		offset = 0;
+		UINT stride = sizeof(VertexPositionUVNormal);
+		UINT offset = 0;
 		context->IASetVertexBuffers(0, 1, m_scene.models[i].m_vertexBuffer.GetAddressOf(), &stride, &offset);
 		context->IASetIndexBuffer(m_scene.models[i].m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -682,8 +554,8 @@ void Sample3DSceneRenderer::DrawScene(void)
 
 	context->UpdateSubresource1(m_scene.constantBuffer.Get(), 0, NULL, &m_scene.skybox.m_constantBufferData, 0, 0, 0);
 
-	stride = sizeof(VertexPositionColor);
-	offset = 0;
+	UINT stride = sizeof(VertexPositionColor);
+	UINT offset = 0;
 	context->IASetVertexBuffers(0, 1, m_scene.skybox.m_vertexBuffer.GetAddressOf(), &stride, &offset);
 
 	context->IASetIndexBuffer(m_scene.skybox.m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);

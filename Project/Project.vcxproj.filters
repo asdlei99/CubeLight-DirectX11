@@ -96,6 +96,7 @@
   <ItemGroup>
     <None Include="Project_TemporaryKey.pfx" />
     <None Include="HullShader.hlsl" />
+    <None Include="Assets\ground.obj" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\ModelVertexShader.hlsl">
@@ -112,7 +113,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <Object Include="Assets\ground.obj">
+    <Object Include="Assets\cube.obj">
       <Filter>Assets</Filter>
     </Object>
   </ItemGroup>
